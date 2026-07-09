@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta name="game-uuid" content="5f0e5da5-c7f1-4606-97f7-6d907585728b" />
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" type="image/gif" href="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" />
+    <title>Prism Rush</title>
+  </head>
+  <body>
+    <div id="app" class="pr-shell">
+      <div id="stage" class="pr-stage" aria-hidden="true"></div>
+      <div class="pr-vignette" aria-hidden="true"></div>
+
+      <header id="hud" class="pr-hud">
+        <div class="pr-hud__cell">
+          <span data-i18n="time">Time</span>
+          <strong id="timeLeft">60</strong>
+        </div>
+        <div class="pr-hud__cell pr-hud__cell--right">
+          <span data-i18n="score">Score</span>
+          <strong id="scoreValue">0</strong>
+        </div>
+      </header>
+
+      <div id="popLayer" class="pr-pop-layer" aria-hidden="true"></div>
+      <div id="bubble" class="pr-bubble" aria-hidden="true"></div>
+      <div id="comboBadge" class="pr-combo" aria-hidden="true">x2</div>
+
+      <main id="startScreen" class="pr-screen pr-screen--start is-active">
+        <section class="pr-panel pr-panel--start">
+          <p class="pr-kicker" data-i18n="kicker">3D light tunnel</p>
+          <h1 data-i18n="title">Prism Rush</h1>
+          <p class="pr-copy" data-i18n="startCopy">Thread the glow, skim the gates, keep the prism singing.</p>
+          <div class="pr-arrow-row" aria-hidden="true">
+            <span class="pr-arrow-row__chip">‹</span>
+            <span class="pr-arrow-row__prism"></span>
+            <span class="pr-arrow-row__chip">›</span>
+          </div>
+          <button id="startButton" class="pr-button pr-button--primary" type="button" data-i18n="start">Launch</button>
+        </section>
+      </main>
+
+      <main id="gameScreen" class="pr-screen pr-screen--game">
+        <div id="laneCue" class="pr-lane-cue" aria-hidden="true">
+          <span>‹</span>
+          <span>›</span>
+        </div>
+      </main>
+
+      <main id="endScreen" class="pr-screen pr-screen--end">
+        <section class="pr-panel pr-panel--end">
+          <p id="resultLabel" class="pr-kicker">Tunnel clear</p>
+          <h2 id="finalScore">0</h2>
+          <div class="pr-stats">
+            <div class="pr-stats__item">
+              <span data-i18n="best">Best</span>
+              <strong id="bestScore">0</strong>
+            </div>
+            <div class="pr-stats__item">
+              <span data-i18n="maxCombo">Max Combo</span>
+              <strong id="maxComboValue">0</strong>
+            </div>
+          </div>
+          <div class="pr-actions">
+            <button id="againButton" class="pr-button pr-button--primary" type="button" data-i18n="again">Again</button>
+            <button id="homeButton" class="pr-button" type="button" data-i18n="home">Home</button>
+          </div>
+        </section>
+      </main>
+
+      <img class="pr-watermark" src="./img/aigram.svg" alt="" draggable="false" />
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
