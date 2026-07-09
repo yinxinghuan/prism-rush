@@ -10,10 +10,10 @@ Prism Rush 是一个独立的 Vite 工程，使用原生 JavaScript、Three.js 0
 
 ## 2. 目录结构
 
-- `index.html`：页面结构、三态屏幕、HUD、冠军入口、角色选择容器、排行榜弹层、Aigram 水印和游戏 UUID meta。
+- `index.html`：页面结构、三态屏幕、HUD、冠军入口、开始页挑战芯片、当前角色 ready 卡片、角色选择容器、排行榜弹层、Aigram 水印和游戏 UUID meta。
 - `src/main.js`：Three.js 场景初始化、低多边形角色加载、对象生成、主循环、碰撞、输入、计分、结算和 UI 状态同步。
 - `src/leaderboard.js`：冠军入口、完整排行榜弹层、Rank API 提交/拉取、非 AlterU 下载 CTA、用户头像/姓名渲染、profile tap 和 `score_beat` 通知。
-- `src/styles.css`：全屏布局、HUD、开始/结算面板、角色卡、排行榜弹层、按钮、连击徽章、浮动分数、台词气泡和响应式尺寸。
+- `src/styles.css`：全屏布局、HUD、开始页海报式布局、ready 卡片、开始/结算面板、角色卡、排行榜弹层、按钮、连击徽章、浮动分数、台词气泡和响应式尺寸。
 - `src/i18n.js`：`zh` / `en` 文案字典、语言检测、`t()` 和随机台词函数。
 - `src/sounds.js`：Web Audio API 音效封装，包括开始、换道、收集、撞击、胜利和点击音。
 - `src/assets/gltf/`：从 `_lowpoly_lab` 复制的 6 个角色 GLB：Student、Teen、Punk、Cowboy、Nurse、Cat。
@@ -32,7 +32,7 @@ Prism Rush 是一个独立的 Vite 工程，使用原生 JavaScript、Three.js 0
 
 主循环使用 `requestAnimationFrame` 驱动，`render()` 计算 `dt` 后调用 `updateScene()`，再用 `EffectComposer` 渲染。`updateScene()` 负责赛道框架循环、星点循环、粒子生命周期、玩家浮动、角色轻摆、棱镜板自转和镜头追随；游戏中额外调用 `updatePlaying()`，按 0.72 秒节奏生成棱晶或危险门。
 
-角色系统由 `CHARACTER_OPTIONS` 定义，每个条目包含角色 id、i18n key、GLB URL、PNG 预览、目标高度和朝向。`renderCharacterPicker()` 构建开始页角色卡，`selectCharacter()` 写入本地选择并调用 `loadCharacter()`；`loadCharacter()` 用 `GLTFLoader` 加载并缓存素材库 GLB，按包围盒缩放到统一高度后挂到玩家的 `characterSlot`。
+角色系统由 `CHARACTER_OPTIONS` 定义，每个条目包含角色 id、i18n key、GLB URL、PNG 预览、目标高度和朝向。`renderCharacterPicker()` 构建开始页角色卡，`updateReadyCard()` 同步当前角色 ready 卡片的 PNG 和名称，`selectCharacter()` 写入本地选择并调用 `loadCharacter()`；`loadCharacter()` 用 `GLTFLoader` 加载并缓存素材库 GLB，按包围盒缩放到统一高度后挂到玩家的 `characterSlot`。
 
 碰撞和更新逻辑使用固定 3 轨道坐标 `[-2.4, 0, 2.4]`。对象从 `z=-64` 向玩家移动，`z>6` 后移除；当对象与玩家横向距离小于 0.82 且 z 距离小于 1.05 时触发收集或撞击。开始后的 1.5 秒缓冲期只跳过危险门死亡判定，不跳过棱晶收集。
 

@@ -59,6 +59,8 @@ const laneCue = document.getElementById('laneCue');
 const popLayer = document.getElementById('popLayer');
 const bubble = document.getElementById('bubble');
 const characterPicker = document.getElementById('characterPicker');
+const readySprite = document.getElementById('readySprite');
+const readyName = document.getElementById('readyName');
 
 document.documentElement.lang = locale;
 document.querySelectorAll('[data-i18n]').forEach((el) => {
@@ -358,6 +360,13 @@ function updateCharacterPicker() {
     if (selected) button.setAttribute('aria-current', 'true');
     else button.removeAttribute('aria-current');
   });
+  updateReadyCard();
+}
+
+function updateReadyCard() {
+  const option = getCharacterOption(state.characterId);
+  readySprite.src = option.sprite;
+  readyName.textContent = t(option.labelKey);
 }
 
 function selectCharacter(id) {
