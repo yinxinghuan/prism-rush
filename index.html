@@ -30,12 +30,23 @@
       <div id="popLayer" class="pr-pop-layer" aria-hidden="true"></div>
       <div id="bubble" class="pr-bubble" aria-hidden="true"></div>
       <div id="comboBadge" class="pr-combo" aria-hidden="true">x2</div>
+      <button id="championPill" class="pr-champion" type="button" aria-label="Open leaderboard">
+        <span id="championAvatar" class="pr-champion__avatar" aria-hidden>★</span>
+        <span class="pr-champion__body">
+          <span id="championName" class="pr-champion__name" data-i18n="leaders">Leaders</span>
+          <span id="championScore" class="pr-champion__score"></span>
+        </span>
+      </button>
 
       <main id="startScreen" class="pr-screen pr-screen--start is-active">
         <section class="pr-panel pr-panel--start">
           <p class="pr-kicker" data-i18n="kicker">3D light tunnel</p>
           <h1 data-i18n="title">Prism Rush</h1>
           <p class="pr-copy" data-i18n="startCopy">Thread the glow, skim the gates, keep the prism singing.</p>
+          <div class="pr-character">
+            <p class="pr-character__label" data-i18n="chooseRunner">Choose runner</p>
+            <div id="characterPicker" class="pr-character__grid" aria-label="Choose runner"></div>
+          </div>
           <div class="pr-arrow-row" aria-hidden="true">
             <span class="pr-arrow-row__chip">‹</span>
             <span class="pr-arrow-row__prism"></span>
@@ -67,14 +78,25 @@
             </div>
           </div>
           <div class="pr-actions">
+            <button id="rankButton" class="pr-button" type="button" data-i18n="leaderboard">Leaderboard</button>
             <button id="againButton" class="pr-button pr-button--primary" type="button" data-i18n="again">Again</button>
             <button id="homeButton" class="pr-button" type="button" data-i18n="home">Home</button>
           </div>
         </section>
       </main>
 
+      <section id="leaderboardOverlay" class="pr-lb" aria-hidden="true">
+        <div class="pr-lb__card" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle">
+          <button id="leaderboardClose" class="pr-lb__close" type="button" aria-label="Close">×</button>
+          <p class="pr-kicker" data-i18n="leaderboardKicker">Global rank</p>
+          <h2 id="leaderboardTitle" class="pr-lb__title" data-i18n="leaderboardTitle">Prism Leaders</h2>
+          <div id="leaderboardList" class="pr-lb__list"></div>
+        </div>
+      </section>
+
       <img class="pr-watermark" src="./img/aigram.svg" alt="" draggable="false" />
     </div>
+    <script src="./aigram-bridge.js"></script>
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>

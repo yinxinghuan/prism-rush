@@ -1,11 +1,25 @@
 import './styles.css';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { locale, randomLine, t } from './i18n.js';
+import { initLeaderboard, snapshotPreRunBest, submitFinalScore } from './leaderboard.js';
 import { playClick, playCollect, playCrash, playMove, playStart, playWin, resumeAudio } from './sounds.js';
+import studentGlb from './assets/gltf/people__student.glb?url';
+import teenGlb from './assets/gltf/people__teen.glb?url';
+import punkGlb from './assets/gltf/archetypes__punk.glb?url';
+import cowboyGlb from './assets/gltf/archetypes__cowboy.glb?url';
+import nurseGlb from './assets/gltf/archetypes__nurse.glb?url';
+import catGlb from './assets/gltf/animals__cat.glb?url';
+import studentSprite from './assets/sprites/people__student.png?url';
+import teenSprite from './assets/sprites/people__teen.png?url';
+import punkSprite from './assets/sprites/archetypes__punk.png?url';
+import cowboySprite from './assets/sprites/archetypes__cowboy.png?url';
+import nurseSprite from './assets/sprites/archetypes__nurse.png?url';
+import catSprite from './assets/sprites/animals__cat.png?url';
 
 const GAME_MS = 60000;
 const GRACE_MS = 1500;
@@ -14,8 +28,17 @@ const SPAWN_Z = -64;
 const REMOVE_Z = 6;
 const PLAYER_Z = 0;
 const BEST_KEY = 'prism_rush_best';
+const CHARACTER_KEY = 'prism_rush_character';
 const FRAME_COUNT = 24;
 const FRAME_SPACING = 4;
+const CHARACTER_OPTIONS = [
+  { id: 'student', labelKey: 'character_student', glb: studentGlb, sprite: studentSprite, height: 1.36, y: 0.18, rotY: Math.PI },
+  { id: 'teen', labelKey: 'character_teen', glb: teenGlb, sprite: teenSprite, height: 1.32, y: 0.18, rotY: Math.PI },
+  { id: 'punk', labelKey: 'character_punk', glb: punkGlb, sprite: punkSprite, height: 1.44, y: 0.15, rotY: Math.PI },
+  { id: 'cowboy', labelKey: 'character_cowboy', glb: cowboyGlb, sprite: cowboySprite, height: 1.42, y: 0.13, rotY: Math.PI },
+  { id: 'nurse', labelKey: 'character_nurse', glb: nurseGlb, sprite: nurseSprite, height: 1.4, y: 0.15, rotY: Math.PI },
+  { id: 'cat', labelKey: 'character_cat', glb: catGlb, sprite: catSprite, height: 0.72, y: 0.2, rotY: Math.PI },
+];
 
 const stage = document.getElementById('stage');
 const hud = document.getElementById('hud');
@@ -35,6 +58,7 @@ const comboBadge = document.getElementById('comboBadge');
 const laneCue = document.getElementById('laneCue');
 const popLayer = document.getElementById('popLayer');
 const bubble = document.getElementById('bubble');
+const characterPicker = document.getElementById('characterPicker');
 
 document.documentElement.lang = locale;
 document.querySelectorAll('[data-i18n]').forEach((el) => {
@@ -58,12 +82,14 @@ const state = {
   gateStreak: 0,
   cueHidden: false,
   endedBy: 'lose',
+  characterId: localStorage.getItem(CHARACTER_KEY) || 'student',
 };
 
 const objects = [];
 const particles = [];
 let objectId = 0;
 let bubbleTimer = 0;
+let characterLoadToken = 0;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
@@ -193,11 +219,13 @@ const playerMat = new THREE.MeshPhysicalMaterial({
 });
 const playerMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.58, 1), playerMat);
 playerMesh.rotation.set(0.2, 0.2, 0.2);
+playerMesh.scale.set(1.2, 0.28, 0.86);
 const playerRing = new THREE.Mesh(
   new THREE.TorusGeometry(0.72, 0.025, 6, 56),
   new THREE.MeshBasicMaterial({ color: 0x72f8ff, transparent: true, opacity: 0.78 }),
 );
 playerRing.rotation.x = Math.PI / 2;
+playerRing.position.y = 0.04;
 const playerGlow = new THREE.Sprite(
   new THREE.SpriteMaterial({
     map: glowTexture('rgba(114,248,255,0.64)', 'rgba(255,138,216,0.2)'),
@@ -208,9 +236,14 @@ const playerGlow = new THREE.Sprite(
   }),
 );
 playerGlow.scale.set(3.2, 3.2, 1);
-player.add(playerGlow, playerMesh, playerRing);
+const characterSlot = new THREE.Group();
+characterSlot.position.y = 0.1;
+player.add(playerGlow, playerMesh, playerRing, characterSlot);
 player.position.set(LANES[state.lane], 0.78, PLAYER_Z);
 scene.add(player);
+
+const gltfLoader = new GLTFLoader();
+const characterCache = new Map();
 
 const crystalGeo = new THREE.OctahedronGeometry(0.38, 0);
 const gateBarGeo = new THREE.BoxGeometry(0.16, 2.5, 0.22);
@@ -246,6 +279,95 @@ const gatePlaneMat = new THREE.MeshBasicMaterial({
   blending: THREE.AdditiveBlending,
   depthWrite: false,
 });
+
+function getCharacterOption(id) {
+  return CHARACTER_OPTIONS.find((option) => option.id === id) || CHARACTER_OPTIONS[0];
+}
+
+function clearCharacterSlot() {
+  while (characterSlot.children.length) {
+    characterSlot.remove(characterSlot.children[0]);
+  }
+}
+
+async function loadCharacter(option) {
+  const token = ++characterLoadToken;
+  try {
+    let source = characterCache.get(option.id);
+    if (!source) {
+      const gltf = await gltfLoader.loadAsync(option.glb);
+      source = gltf.scene;
+      source.traverse((child) => {
+        if (child.isMesh) {
+          child.frustumCulled = false;
+          if (child.material) {
+            child.material.flatShading = true;
+            child.material.needsUpdate = true;
+          }
+        }
+      });
+      characterCache.set(option.id, source);
+    }
+    if (token !== characterLoadToken) return;
+    const model = source.clone(true);
+    const box = new THREE.Box3().setFromObject(model);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const scale = size.y > 0 ? option.height / size.y : 1;
+    model.scale.setScalar(scale);
+    model.rotation.y = option.rotY;
+    const scaledBox = new THREE.Box3().setFromObject(model);
+    const center = new THREE.Vector3();
+    scaledBox.getCenter(center);
+    model.position.set(-center.x, option.y - scaledBox.min.y, -center.z - 0.05);
+    clearCharacterSlot();
+    characterSlot.add(model);
+  } catch {
+    clearCharacterSlot();
+  }
+}
+
+function renderCharacterPicker() {
+  characterPicker.innerHTML = '';
+  CHARACTER_OPTIONS.forEach((option) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'pr-character-card';
+    button.dataset.character = option.id;
+    button.setAttribute('aria-label', t(option.labelKey));
+    const img = document.createElement('img');
+    img.src = option.sprite;
+    img.alt = '';
+    img.draggable = false;
+    const label = document.createElement('span');
+    label.textContent = t(option.labelKey);
+    button.append(img, label);
+    button.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      selectCharacter(option.id);
+    });
+    characterPicker.appendChild(button);
+  });
+  updateCharacterPicker();
+}
+
+function updateCharacterPicker() {
+  characterPicker.querySelectorAll('.pr-character-card').forEach((button) => {
+    const selected = button.dataset.character === state.characterId;
+    button.classList.toggle('is-selected', selected);
+    if (selected) button.setAttribute('aria-current', 'true');
+    else button.removeAttribute('aria-current');
+  });
+}
+
+function selectCharacter(id) {
+  const option = getCharacterOption(id);
+  state.characterId = option.id;
+  localStorage.setItem(CHARACTER_KEY, option.id);
+  updateCharacterPicker();
+  loadCharacter(option);
+  playClick();
+}
 
 function createCrystal(lane) {
   const group = new THREE.Group();
@@ -374,6 +496,7 @@ function setPhase(next) {
 function startGame() {
   resumeAudio();
   playStart();
+  snapshotPreRunBest();
   resetGame();
   state.startAt = performance.now();
   setPhase('playing');
@@ -396,6 +519,7 @@ function endGame(kind) {
   finalScoreEl.textContent = String(state.score);
   bestScoreEl.textContent = String(state.best);
   maxComboValueEl.textContent = String(state.maxCombo);
+  submitFinalScore(state.score);
   showBubble(randomLine(kind === 'win' ? 'winLines' : 'loseLines'));
   if (kind === 'win') {
     playWin();
@@ -573,9 +697,12 @@ function updateScene(dt, now) {
 
   player.position.x = THREE.MathUtils.damp(player.position.x, LANES[state.targetLane], 16, dt);
   player.position.y = 0.78 + Math.sin(now * 0.004) * 0.18;
-  player.rotation.y += dt * (state.phase === 'playing' ? 2.6 : 0.8);
   player.rotation.z = THREE.MathUtils.damp(player.rotation.z, (state.targetLane - 1) * -0.24, 8, dt);
+  playerMesh.rotation.y += dt * (state.phase === 'playing' ? 5.0 : 1.8);
+  playerMesh.rotation.x = 0.2 + Math.sin(now * 0.005) * 0.08;
   playerRing.rotation.z -= dt * 2.4;
+  characterSlot.position.y = 0.1 + Math.sin(now * 0.006) * 0.04;
+  characterSlot.rotation.x = Math.sin(now * 0.006) * 0.035;
   playerGlow.material.opacity = 0.48 + Math.sin(now * 0.005) * 0.12;
 
   camera.position.x = THREE.MathUtils.damp(camera.position.x, player.position.x * 0.22, 4, dt);
@@ -643,6 +770,10 @@ window.addEventListener('keydown', (ev) => {
 window.addEventListener('resize', resize);
 
 bestScoreEl.textContent = String(state.best);
+state.characterId = getCharacterOption(state.characterId).id;
+renderCharacterPicker();
+loadCharacter(getCharacterOption(state.characterId));
+initLeaderboard();
 resize();
 requestAnimationFrame((now) => {
   state.lastTime = now;
