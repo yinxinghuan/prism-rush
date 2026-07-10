@@ -30,6 +30,7 @@
       <div id="popLayer" class="pr-pop-layer" aria-hidden="true"></div>
       <div id="bubble" class="pr-bubble" aria-hidden="true"></div>
       <div id="comboBadge" class="pr-combo" aria-hidden="true">x2</div>
+      <button id="shopButton" class="pr-shop-button" type="button" aria-label="Open character shop" data-i18n="shop">Characters</button>
       <button id="championPill" class="pr-champion" type="button" aria-label="Open leaderboard">
         <span id="championAvatar" class="pr-champion__avatar" aria-hidden>★</span>
         <span class="pr-champion__body">
@@ -39,32 +40,10 @@
       </button>
 
       <main id="startScreen" class="pr-screen pr-screen--start is-active">
-        <section class="pr-panel pr-panel--start">
-          <div class="pr-start-head">
-            <p class="pr-kicker" data-i18n="kicker">3D light tunnel</p>
-            <h1 data-i18n="title">Prism Rush</h1>
-            <p class="pr-copy" data-i18n="startCopy">Thread the glow, skim the gates, keep the prism singing.</p>
-            <div class="pr-start-metrics" aria-label="Game goals">
-              <span><strong>60s</strong><small data-i18n="metricRun">sprint</small></span>
-              <span><strong>3</strong><small data-i18n="metricLanes">lanes</small></span>
-              <span><strong>x5</strong><small data-i18n="metricCombo">combo</small></span>
-            </div>
-          </div>
-          <div class="pr-ready">
-            <div class="pr-ready__portrait">
-              <img id="readySprite" alt="" draggable="false" />
-            </div>
-            <div class="pr-ready__body">
-              <span data-i18n="runnerReady">Runner ready</span>
-              <strong id="readyName">Student</strong>
-              <small data-i18n="readyHint">Dodge red gates. Chase clean lines.</small>
-            </div>
-          </div>
-          <div class="pr-character">
-            <p class="pr-character__label" data-i18n="chooseRunner">Choose runner</p>
-            <div id="characterPicker" class="pr-character__grid" aria-label="Choose runner"></div>
-          </div>
-          <button id="startButton" class="pr-button pr-button--primary" type="button" data-i18n="start">Launch</button>
+        <section class="pr-start-guide" aria-label="How to play">
+          <p class="pr-start-guide__brand" data-i18n="title">Prism Rush</p>
+          <p class="pr-start-guide__action" data-i18n="tapToStart">Tap to start</p>
+          <p class="pr-start-guide__hint" data-i18n="startHint">Tap left or right to switch lanes</p>
         </section>
       </main>
 
@@ -103,6 +82,22 @@
           <p class="pr-kicker" data-i18n="leaderboardKicker">Global rank</p>
           <h2 id="leaderboardTitle" class="pr-lb__title" data-i18n="leaderboardTitle">Prism Leaders</h2>
           <div id="leaderboardList" class="pr-lb__list"></div>
+        </div>
+      </section>
+
+      <section id="shopOverlay" class="pr-shop" aria-hidden="true">
+        <div class="pr-shop__card" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+          <button id="shopClose" class="pr-shop__close" type="button" aria-label="Close">×</button>
+          <div class="pr-shop__head">
+            <p class="pr-kicker" data-i18n="shopKicker">Roster</p>
+            <h2 id="shopTitle" class="pr-shop__title" data-i18n="shopTitle">Character Shop</h2>
+            <p class="pr-shop__subtitle" data-i18n="shopSubtitle">Unlock with Prism. Random rolls from owned.</p>
+          </div>
+          <div class="pr-shop__balance">
+            <span data-i18n="prisms">Prism</span>
+            <strong id="shopBalance">0</strong>
+          </div>
+          <div id="shopGrid" class="pr-shop__grid"></div>
         </div>
       </section>
 

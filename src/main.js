@@ -28,24 +28,62 @@ const SPAWN_Z = -64;
 const REMOVE_Z = 6;
 const PLAYER_Z = 0;
 const BEST_KEY = 'prism_rush_best';
-const CHARACTER_KEY = 'prism_rush_character';
+const STORE_OWNED_KEY = 'prism_rush_owned_characters';
+const STORE_BALANCE_KEY = 'prism_rush_prisms';
+const STORE_PICKED_KEY = 'prism_rush_selected_character';
 const FRAME_COUNT = 24;
 const FRAME_SPACING = 4;
 const CHARACTER_OPTIONS = [
-  { id: 'student', labelKey: 'character_student', glb: studentGlb, sprite: studentSprite, height: 1.36, y: 0.18, rotY: Math.PI },
-  { id: 'teen', labelKey: 'character_teen', glb: teenGlb, sprite: teenSprite, height: 1.32, y: 0.18, rotY: Math.PI },
-  { id: 'punk', labelKey: 'character_punk', glb: punkGlb, sprite: punkSprite, height: 1.44, y: 0.15, rotY: Math.PI },
-  { id: 'cowboy', labelKey: 'character_cowboy', glb: cowboyGlb, sprite: cowboySprite, height: 1.42, y: 0.13, rotY: Math.PI },
-  { id: 'nurse', labelKey: 'character_nurse', glb: nurseGlb, sprite: nurseSprite, height: 1.4, y: 0.15, rotY: Math.PI },
-  { id: 'cat', labelKey: 'character_cat', glb: catGlb, sprite: catSprite, height: 0.72, y: 0.2, rotY: Math.PI },
+  { id: 'student', labelKey: 'character_student', glb: studentGlb, sprite: studentSprite, height: 1.36, y: 0.18, rotY: Math.PI, price: 0, tint: '#72f8ff' },
+  { id: 'teen', labelKey: 'character_teen', glb: teenGlb, sprite: teenSprite, height: 1.32, y: 0.18, rotY: Math.PI, price: 0, tint: '#8effce' },
+  { id: 'punk', labelKey: 'character_punk', glb: punkGlb, sprite: punkSprite, height: 1.44, y: 0.15, rotY: Math.PI, price: 180, tint: '#d89aff' },
+  { id: 'cowboy', labelKey: 'character_cowboy', glb: cowboyGlb, sprite: cowboySprite, height: 1.42, y: 0.13, rotY: Math.PI, price: 240, tint: '#fff06a' },
+  { id: 'nurse', labelKey: 'character_nurse', glb: nurseGlb, sprite: nurseSprite, height: 1.4, y: 0.15, rotY: Math.PI, price: 320, tint: '#a7b3ff' },
+  { id: 'cat', labelKey: 'character_cat', glb: catGlb, sprite: catSprite, height: 0.72, y: 0.2, rotY: Math.PI / 2, price: 420, tint: '#ff7a87' },
 ];
+const STARTER_CHARACTER_IDS = ['student', 'teen'];
+
+function isCharacterId(id) {
+  return CHARACTER_OPTIONS.some((option) => option.id === id);
+}
+
+function parseOwned(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id) => typeof id === 'string' && isCharacterId(id));
+  } catch {
+    return [];
+  }
+}
+
+function loadCharacterStore() {
+  const owned = new Set(STARTER_CHARACTER_IDS);
+  parseOwned(localStorage.getItem(STORE_OWNED_KEY)).forEach((id) => owned.add(id));
+  const pickedRaw = localStorage.getItem(STORE_PICKED_KEY) || 'random';
+  const picked = pickedRaw === 'random' || isCharacterId(pickedRaw) ? pickedRaw : 'random';
+  const balance = Math.max(0, Number.parseInt(localStorage.getItem(STORE_BALANCE_KEY) || '0', 10) || 0);
+  return { owned: [...owned], balance, picked };
+}
+
+function saveCharacterStore(nextStore) {
+  localStorage.setItem(STORE_OWNED_KEY, JSON.stringify(nextStore.owned));
+  localStorage.setItem(STORE_BALANCE_KEY, String(Math.floor(nextStore.balance)));
+  localStorage.setItem(STORE_PICKED_KEY, nextStore.picked);
+}
+
+function resolveCharacterId(storeState) {
+  if (storeState.picked !== 'random' && storeState.owned.includes(storeState.picked)) return storeState.picked;
+  const pool = storeState.owned.filter(isCharacterId);
+  return pool[Math.floor(Math.random() * pool.length)] || STARTER_CHARACTER_IDS[0];
+}
 
 const stage = document.getElementById('stage');
 const hud = document.getElementById('hud');
 const gameScreen = document.getElementById('gameScreen');
 const startScreen = document.getElementById('startScreen');
 const endScreen = document.getElementById('endScreen');
-const startButton = document.getElementById('startButton');
 const againButton = document.getElementById('againButton');
 const homeButton = document.getElementById('homeButton');
 const timeLeftEl = document.getElementById('timeLeft');
@@ -58,14 +96,18 @@ const comboBadge = document.getElementById('comboBadge');
 const laneCue = document.getElementById('laneCue');
 const popLayer = document.getElementById('popLayer');
 const bubble = document.getElementById('bubble');
-const characterPicker = document.getElementById('characterPicker');
-const readySprite = document.getElementById('readySprite');
-const readyName = document.getElementById('readyName');
+const shopButton = document.getElementById('shopButton');
+const shopOverlay = document.getElementById('shopOverlay');
+const shopClose = document.getElementById('shopClose');
+const shopGrid = document.getElementById('shopGrid');
+const shopBalance = document.getElementById('shopBalance');
 
 document.documentElement.lang = locale;
 document.querySelectorAll('[data-i18n]').forEach((el) => {
   el.textContent = t(el.dataset.i18n);
 });
+
+let characterStore = loadCharacterStore();
 
 const state = {
   phase: 'start',
@@ -84,7 +126,7 @@ const state = {
   gateStreak: 0,
   cueHidden: false,
   endedBy: 'lose',
-  characterId: localStorage.getItem(CHARACTER_KEY) || 'student',
+  characterId: resolveCharacterId(characterStore),
 };
 
 const objects = [];
@@ -92,6 +134,8 @@ const particles = [];
 let objectId = 0;
 let bubbleTimer = 0;
 let characterLoadToken = 0;
+let characterModel = null;
+let characterMeshes = [];
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
@@ -290,6 +334,8 @@ function clearCharacterSlot() {
   while (characterSlot.children.length) {
     characterSlot.remove(characterSlot.children[0]);
   }
+  characterModel = null;
+  characterMeshes = [];
 }
 
 async function loadCharacter(option) {
@@ -312,6 +358,13 @@ async function loadCharacter(option) {
     }
     if (token !== characterLoadToken) return;
     const model = source.clone(true);
+    const meshes = [];
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.userData.baseRotation = child.rotation.clone();
+        meshes.push(child);
+      }
+    });
     const box = new THREE.Box3().setFromObject(model);
     const size = new THREE.Vector3();
     box.getSize(size);
@@ -322,60 +375,122 @@ async function loadCharacter(option) {
     const center = new THREE.Vector3();
     scaledBox.getCenter(center);
     model.position.set(-center.x, option.y - scaledBox.min.y, -center.z - 0.05);
+    model.userData.basePosition = model.position.clone();
     clearCharacterSlot();
+    characterModel = model;
+    characterMeshes = meshes;
     characterSlot.add(model);
   } catch {
     clearCharacterSlot();
   }
 }
 
-function renderCharacterPicker() {
-  characterPicker.innerHTML = '';
+function prepareRandomCharacter() {
+  state.characterId = resolveCharacterId(characterStore);
+  loadCharacter(getCharacterOption(state.characterId));
+}
+
+function updateShopVisibility() {
+  const visible = state.phase === 'start' || state.phase === 'end';
+  shopButton.classList.toggle('is-visible', visible);
+}
+
+function persistStore(nextStore = characterStore) {
+  characterStore = nextStore;
+  saveCharacterStore(characterStore);
+  renderShop();
+}
+
+function earnPrisms(amount) {
+  if (amount <= 0) return;
+  persistStore({ ...characterStore, balance: characterStore.balance + Math.floor(amount) });
+}
+
+function buyCharacter(id) {
+  const option = getCharacterOption(id);
+  if (characterStore.owned.includes(option.id)) return;
+  if (characterStore.balance < option.price) return;
+  persistStore({
+    ...characterStore,
+    balance: characterStore.balance - option.price,
+    owned: [...characterStore.owned, option.id],
+    picked: option.id,
+  });
+  prepareRandomCharacter();
+}
+
+function pickCharacter(selection) {
+  if (selection !== 'random' && !characterStore.owned.includes(selection)) return;
+  persistStore({ ...characterStore, picked: selection });
+  prepareRandomCharacter();
+}
+
+function renderShop() {
+  if (!shopGrid || !shopBalance) return;
+  shopBalance.textContent = String(Math.floor(characterStore.balance));
+  shopGrid.innerHTML = '';
+
+  const randomCard = document.createElement('button');
+  randomCard.type = 'button';
+  randomCard.className = `pr-shop-card pr-shop-card--random${characterStore.picked === 'random' ? ' is-active' : ''}`;
+  randomCard.style.setProperty('--card-tint', '#72f8ff');
+  randomCard.innerHTML = `
+    <span class="pr-shop-card__mark">?</span>
+    <span class="pr-shop-card__name">${t('random')}</span>
+    <span class="pr-shop-card__state">${characterStore.picked === 'random' ? t('inUse') : t('use')}</span>
+  `;
+  randomCard.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    pickCharacter('random');
+  });
+  shopGrid.appendChild(randomCard);
+
   CHARACTER_OPTIONS.forEach((option) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'pr-character-card';
-    button.dataset.character = option.id;
-    button.setAttribute('aria-label', t(option.labelKey));
+    const owned = characterStore.owned.includes(option.id);
+    const active = characterStore.picked === option.id;
+    const affordable = characterStore.balance >= option.price;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `pr-shop-card${active ? ' is-active' : ''}${!owned ? ' is-locked' : ''}`;
+    card.style.setProperty('--card-tint', option.tint);
+    card.disabled = !owned && !affordable;
+
     const img = document.createElement('img');
+    img.className = 'pr-shop-card__img';
     img.src = option.sprite;
     img.alt = '';
     img.draggable = false;
-    const label = document.createElement('span');
-    label.textContent = t(option.labelKey);
-    button.append(img, label);
-    button.addEventListener('pointerdown', (ev) => {
-      ev.preventDefault();
-      selectCharacter(option.id);
+
+    const name = document.createElement('span');
+    name.className = 'pr-shop-card__name';
+    name.textContent = t(option.labelKey);
+
+    const stateLabel = document.createElement('span');
+    stateLabel.className = 'pr-shop-card__state';
+    if (active) stateLabel.textContent = t('inUse');
+    else if (owned) stateLabel.textContent = t('use');
+    else if (affordable) stateLabel.textContent = `${t('unlock')} ${option.price}`;
+    else stateLabel.textContent = t('locked', { n: option.price - characterStore.balance });
+
+    card.append(img, name, stateLabel);
+    card.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (owned) pickCharacter(active ? 'random' : option.id);
+      else buyCharacter(option.id);
     });
-    characterPicker.appendChild(button);
+    shopGrid.appendChild(card);
   });
-  updateCharacterPicker();
 }
 
-function updateCharacterPicker() {
-  characterPicker.querySelectorAll('.pr-character-card').forEach((button) => {
-    const selected = button.dataset.character === state.characterId;
-    button.classList.toggle('is-selected', selected);
-    if (selected) button.setAttribute('aria-current', 'true');
-    else button.removeAttribute('aria-current');
-  });
-  updateReadyCard();
+function openShop() {
+  renderShop();
+  shopOverlay.classList.add('is-visible');
+  shopOverlay.setAttribute('aria-hidden', 'false');
 }
 
-function updateReadyCard() {
-  const option = getCharacterOption(state.characterId);
-  readySprite.src = option.sprite;
-  readyName.textContent = t(option.labelKey);
-}
-
-function selectCharacter(id) {
-  const option = getCharacterOption(id);
-  state.characterId = option.id;
-  localStorage.setItem(CHARACTER_KEY, option.id);
-  updateCharacterPicker();
-  loadCharacter(option);
-  playClick();
+function closeShop() {
+  shopOverlay.classList.remove('is-visible');
+  shopOverlay.setAttribute('aria-hidden', 'true');
 }
 
 function createCrystal(lane) {
@@ -500,6 +615,8 @@ function setPhase(next) {
   gameScreen.classList.toggle('is-active', next === 'playing');
   endScreen.classList.toggle('is-active', next === 'end');
   hud.classList.toggle('is-visible', next === 'playing');
+  updateShopVisibility();
+  if (next === 'playing') closeShop();
 }
 
 function startGame() {
@@ -515,6 +632,7 @@ function goHome() {
   resumeAudio();
   playClick();
   clearObjects();
+  prepareRandomCharacter();
   setPhase('start');
 }
 
@@ -528,6 +646,7 @@ function endGame(kind) {
   finalScoreEl.textContent = String(state.score);
   bestScoreEl.textContent = String(state.best);
   maxComboValueEl.textContent = String(state.maxCombo);
+  earnPrisms(state.score);
   submitFinalScore(state.score);
   showBubble(randomLine(kind === 'win' ? 'winLines' : 'loseLines'));
   if (kind === 'win') {
@@ -710,8 +829,26 @@ function updateScene(dt, now) {
   playerMesh.rotation.y += dt * (state.phase === 'playing' ? 5.0 : 1.8);
   playerMesh.rotation.x = 0.2 + Math.sin(now * 0.005) * 0.08;
   playerRing.rotation.z -= dt * 2.4;
-  characterSlot.position.y = 0.1 + Math.sin(now * 0.006) * 0.04;
-  characterSlot.rotation.x = Math.sin(now * 0.006) * 0.035;
+  const runMotion = state.phase === 'playing' ? 1 : 0.38;
+  const stride = now * (state.phase === 'playing' ? 0.013 : 0.005);
+  characterSlot.position.y = 0.1 + Math.abs(Math.sin(stride)) * 0.08 * runMotion;
+  characterSlot.rotation.x = -0.035 * runMotion + Math.sin(stride) * 0.055 * runMotion;
+  characterSlot.rotation.y = Math.sin(stride * 0.5) * 0.045 * runMotion;
+  characterSlot.rotation.z = (state.targetLane - 1) * -0.035 + Math.sin(stride + 0.7) * 0.038 * runMotion;
+  if (characterModel) {
+    const base = characterModel.userData.basePosition;
+    if (base) {
+      characterModel.position.z = base.z + Math.sin(stride + 0.6) * 0.035 * runMotion;
+    }
+  }
+  characterMeshes.forEach((mesh, index) => {
+    if (index > 5) return;
+    const base = mesh.userData.baseRotation;
+    if (!base) return;
+    const wave = Math.sin(stride + index * 1.7) * 0.04 * runMotion;
+    mesh.rotation.x = base.x + wave;
+    mesh.rotation.z = base.z + Math.cos(stride + index) * 0.025 * runMotion;
+  });
   playerGlow.material.opacity = 0.48 + Math.sin(now * 0.005) * 0.12;
 
   camera.position.x = THREE.MathUtils.damp(camera.position.x, player.position.x * 0.22, 4, dt);
@@ -738,7 +875,8 @@ function resize() {
   camera.updateProjectionMatrix();
 }
 
-startButton.addEventListener('pointerdown', (ev) => {
+startScreen.addEventListener('pointerdown', (ev) => {
+  if (state.phase !== 'start') return;
   ev.preventDefault();
   startGame();
 });
@@ -747,12 +885,30 @@ againButton.addEventListener('pointerdown', (ev) => {
   ev.preventDefault();
   resumeAudio();
   playClick();
+  prepareRandomCharacter();
   startGame();
 });
 
 homeButton.addEventListener('pointerdown', (ev) => {
   ev.preventDefault();
   goHome();
+});
+
+shopButton.addEventListener('pointerdown', (ev) => {
+  ev.preventDefault();
+  ev.stopPropagation();
+  resumeAudio();
+  playClick();
+  openShop();
+});
+
+shopClose.addEventListener('click', (ev) => {
+  ev.stopPropagation();
+  closeShop();
+});
+
+shopOverlay.addEventListener('click', (ev) => {
+  if (ev.target === shopOverlay) closeShop();
 });
 
 gameScreen.addEventListener('pointerdown', (ev) => {
@@ -772,7 +928,12 @@ window.addEventListener('keydown', (ev) => {
   } else if (ev.code === 'Space') {
     ev.preventDefault();
     if (state.phase === 'start') startGame();
-    if (state.phase === 'end') startGame();
+    if (state.phase === 'end') {
+      prepareRandomCharacter();
+      startGame();
+    }
+  } else if (ev.key === 'Escape') {
+    closeShop();
   }
 });
 
@@ -780,9 +941,10 @@ window.addEventListener('resize', resize);
 
 bestScoreEl.textContent = String(state.best);
 state.characterId = getCharacterOption(state.characterId).id;
-renderCharacterPicker();
 loadCharacter(getCharacterOption(state.characterId));
 initLeaderboard();
+renderShop();
+updateShopVisibility();
 resize();
 requestAnimationFrame((now) => {
   state.lastTime = now;

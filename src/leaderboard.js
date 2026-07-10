@@ -1,8 +1,8 @@
 import { t } from './i18n.js';
 
 const ALTERU_APP_URL = 'https://alteru.app';
-const POSTER_URL = 'https://yinxinghuan.github.io/prism-rush/poster.svg';
-const POSTER_PROMPT = 'A glowing low-poly runner rides a prism board through a cyan and violet 3D neon tunnel.';
+const POSTER_URL = 'https://yinxinghuan.github.io/prism-rush/poster.png';
+const POSTER_PROMPT = 'A voxel night-street Prism Rush poster with a bold title, a runner, crystal gates, prism shards, and shadow monsters.';
 
 let championPill;
 let championAvatar;

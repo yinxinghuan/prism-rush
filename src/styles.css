@@ -199,6 +199,72 @@ button {
   touch-action: none;
 }
 
+.pr-start-guide {
+  position: absolute;
+  left: 50%;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  width: min(300px, calc(100vw - 42px));
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 12px 14px 13px;
+  border: 1px solid rgba(114, 248, 255, 0.24);
+  border-radius: 8px;
+  color: var(--pr-text);
+  background: rgba(5, 11, 25, 0.58);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.pr-start-guide::before {
+  content: "";
+  width: 28px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--pr-cyan);
+  box-shadow: 0 0 14px rgba(114, 248, 255, 0.36);
+}
+
+.pr-start-guide__brand,
+.pr-start-guide__action,
+.pr-start-guide__hint {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+}
+
+.pr-start-guide__brand {
+  color: var(--pr-cyan);
+  font-family: var(--pr-data);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.pr-start-guide__action {
+  font-family: var(--pr-display);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 0.95;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pr-start-guide__hint {
+  color: rgba(247, 251, 255, 0.76);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
 .pr-panel {
   position: relative;
   width: min(396px, calc(100vw - 36px));
@@ -593,6 +659,9 @@ h2 {
 .pr-button:focus-visible,
 .pr-character-card:focus-visible,
 .pr-champion:focus-visible,
+.pr-shop-button:focus-visible,
+.pr-shop__close:focus-visible,
+.pr-shop-card:focus-visible,
 .pr-lb__close:focus-visible,
 .pr-lb-row:focus-visible {
   outline: 2px solid var(--pr-volt);
@@ -735,6 +804,45 @@ h2 {
   backdrop-filter: blur(14px);
   touch-action: manipulation;
   transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.pr-shop-button {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top));
+  right: 14px;
+  z-index: 35;
+  min-width: 94px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0 12px;
+  border: 1px solid rgba(114, 248, 255, 0.22);
+  border-radius: 8px;
+  color: var(--pr-cyan);
+  background: rgba(6, 12, 28, 0.7);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  font-family: var(--pr-data);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  touch-action: manipulation;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.pr-shop-button.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.pr-shop-button:active {
+  transform: translateY(1px) scale(0.99);
 }
 
 .pr-champion.is-visible {
@@ -1027,6 +1135,213 @@ h2 {
   touch-action: manipulation;
 }
 
+.pr-shop {
+  position: absolute;
+  inset: 0;
+  z-index: 56;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3, 7, 18, 0.66);
+  opacity: 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: opacity 160ms ease;
+}
+
+.pr-shop.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pr-shop__card {
+  position: relative;
+  width: min(410px, calc(100vw - 34px));
+  max-height: min(690px, calc(100vh - 40px));
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 20px 16px 16px;
+  border: 1px solid rgba(114, 248, 255, 0.26);
+  border-radius: 8px;
+  background: rgba(6, 12, 28, 0.93);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.52),
+    0 0 28px rgba(114, 248, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.pr-shop__head {
+  display: grid;
+  gap: 7px;
+  padding-right: 44px;
+}
+
+.pr-shop__title {
+  margin: 0;
+  font-family: var(--pr-display);
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.pr-shop__subtitle {
+  margin: 0;
+  color: rgba(247, 251, 255, 0.72);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.pr-shop__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(247, 251, 255, 0.2);
+  border-radius: 8px;
+  color: var(--pr-text);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  font-size: 26px;
+  line-height: 1;
+  touch-action: manipulation;
+}
+
+.pr-shop__balance {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border: 1px solid rgba(114, 248, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.pr-shop__balance span {
+  color: var(--pr-muted);
+  font-family: var(--pr-data);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.pr-shop__balance strong {
+  color: var(--pr-cyan);
+  font-family: var(--pr-data);
+  font-size: 22px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.pr-shop__grid {
+  min-height: 230px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 9px;
+  padding: 1px 1px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pr-shop-card {
+  position: relative;
+  min-width: 0;
+  min-height: 104px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+  padding: 10px 8px 9px;
+  border: 1px solid rgba(247, 251, 255, 0.14);
+  border-radius: 8px;
+  color: var(--pr-text);
+  background: rgba(255, 255, 255, 0.055);
+  cursor: pointer;
+  text-align: center;
+  touch-action: manipulation;
+}
+
+.pr-shop-card::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 7px;
+  height: 2px;
+  background: var(--card-tint, var(--pr-cyan));
+  opacity: 0.62;
+}
+
+.pr-shop-card.is-active {
+  border-color: rgba(114, 248, 255, 0.62);
+  background: rgba(114, 248, 255, 0.1);
+  box-shadow: 0 0 16px rgba(114, 248, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.pr-shop-card.is-locked {
+  color: rgba(247, 251, 255, 0.5);
+}
+
+.pr-shop-card:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.pr-shop-card__img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.28));
+}
+
+.pr-shop-card__mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(114, 248, 255, 0.22);
+  border-radius: 50%;
+  color: var(--pr-cyan);
+  background: rgba(114, 248, 255, 0.08);
+  font-family: var(--pr-data);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.pr-shop-card__name {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-shop-card__state {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--card-tint, var(--pr-cyan));
+  font-family: var(--pr-data);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .pr-watermark {
   position: absolute;
   right: 12px;
@@ -1070,12 +1385,6 @@ h2 {
 }
 
 @media (min-width: 760px) {
-  .pr-screen--start {
-    align-items: center;
-    justify-items: start;
-    padding-left: 52px;
-  }
-
   .pr-screen--end {
     align-items: center;
     justify-items: end;
@@ -1084,11 +1393,14 @@ h2 {
 }
 
 @media (max-width: 759px) {
-  .pr-screen--start,
   .pr-screen--end {
     align-items: end;
     justify-items: center;
     padding: calc(82px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .pr-screen--start {
+    padding: 0;
   }
 
   .pr-panel {
@@ -1101,6 +1413,12 @@ h2 {
 
   .pr-champion {
     width: min(190px, calc(100vw - 158px));
+  }
+
+  .pr-shop-button {
+    min-width: 74px;
+    padding: 0 9px;
+    font-size: 11px;
   }
 
   .pr-hud__cell {
@@ -1118,6 +1436,23 @@ h2 {
 
   .pr-lane-cue {
     gap: 96px;
+  }
+
+  .pr-start-guide {
+    bottom: calc(82px + env(safe-area-inset-bottom));
+  }
+
+  .pr-shop {
+    padding: 16px;
+  }
+
+  .pr-shop__card {
+    width: min(370px, calc(100vw - 28px));
+    max-height: min(690px, calc(100vh - 32px));
+  }
+
+  .pr-shop-card {
+    min-height: 96px;
   }
 }
 
