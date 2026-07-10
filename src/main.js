@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { locale, randomLine, t } from './i18n.js';
+import { locale, nextLine, t } from './i18n.js';
 import { initLeaderboard, snapshotPreRunBest, submitFinalScore } from './leaderboard.js';
 import { playClick, playCollect, playCrash, playMove, playStart, playWin, resumeAudio } from './sounds.js';
 import studentGlb from './assets/gltf/people__student.glb?url';
@@ -39,7 +39,7 @@ const CHARACTER_OPTIONS = [
   { id: 'punk', labelKey: 'character_punk', glb: punkGlb, sprite: punkSprite, height: 1.44, y: 0.15, rotY: Math.PI, price: 180, tint: '#d89aff' },
   { id: 'cowboy', labelKey: 'character_cowboy', glb: cowboyGlb, sprite: cowboySprite, height: 1.42, y: 0.13, rotY: Math.PI, price: 240, tint: '#fff06a' },
   { id: 'nurse', labelKey: 'character_nurse', glb: nurseGlb, sprite: nurseSprite, height: 1.4, y: 0.15, rotY: Math.PI, price: 320, tint: '#a7b3ff' },
-  { id: 'cat', labelKey: 'character_cat', glb: catGlb, sprite: catSprite, height: 0.72, y: 0.2, rotY: Math.PI / 2, price: 420, tint: '#ff7a87' },
+  { id: 'cat', labelKey: 'character_cat', glb: catGlb, sprite: catSprite, height: 0.72, y: 0.2, rotY: -Math.PI / 2, price: 420, tint: '#ff7a87' },
 ];
 const STARTER_CHARACTER_IDS = ['student', 'teen'];
 
@@ -95,7 +95,8 @@ const resultLabelEl = document.getElementById('resultLabel');
 const comboBadge = document.getElementById('comboBadge');
 const laneCue = document.getElementById('laneCue');
 const popLayer = document.getElementById('popLayer');
-const bubble = document.getElementById('bubble');
+const ratingPop = document.getElementById('ratingPop');
+const startGuide = document.getElementById('startGuide');
 const shopButton = document.getElementById('shopButton');
 const shopOverlay = document.getElementById('shopOverlay');
 const shopClose = document.getElementById('shopClose');
@@ -132,7 +133,6 @@ const state = {
 const objects = [];
 const particles = [];
 let objectId = 0;
-let bubbleTimer = 0;
 let characterLoadToken = 0;
 let characterModel = null;
 let characterMeshes = [];
@@ -615,6 +615,7 @@ function setPhase(next) {
   gameScreen.classList.toggle('is-active', next === 'playing');
   endScreen.classList.toggle('is-active', next === 'end');
   hud.classList.toggle('is-visible', next === 'playing');
+  startGuide.classList.toggle('is-visible', next === 'start');
   updateShopVisibility();
   if (next === 'playing') closeShop();
 }
@@ -648,7 +649,6 @@ function endGame(kind) {
   maxComboValueEl.textContent = String(state.maxCombo);
   earnPrisms(state.score);
   submitFinalScore(state.score);
-  showBubble(randomLine(kind === 'win' ? 'winLines' : 'loseLines'));
   if (kind === 'win') {
     playWin();
   } else {
@@ -688,7 +688,10 @@ function collectObject(obj) {
   const origin = obj.group.position.clone();
   spawnParticles(origin, 0x72f8ff, 12, false);
   popScore(gain, origin);
-  showBubble(randomLine('collectLines'));
+  const ratingText = state.combo >= 5
+    ? t('ratingCombo', { n: state.combo })
+    : nextLine('ratingWords');
+  showRating(ratingText, state.combo >= 5 ? 'perfect' : state.combo >= 2 ? 'good' : 'plain');
   playCollect(state.combo);
 }
 
@@ -703,17 +706,12 @@ function popScore(value, worldPos) {
   window.setTimeout(() => el.remove(), 780);
 }
 
-function showBubble(text) {
+function showRating(text, tone) {
   if (!text) return;
-  const pos = worldToScreen(player.position.clone().add(new THREE.Vector3(0, 1.4, 0)));
-  bubble.textContent = text;
-  bubble.style.left = `${pos.x}px`;
-  bubble.style.top = `${pos.y}px`;
-  bubble.classList.add('is-visible');
-  window.clearTimeout(bubbleTimer);
-  bubbleTimer = window.setTimeout(() => {
-    bubble.classList.remove('is-visible');
-  }, 900);
+  ratingPop.textContent = text;
+  ratingPop.classList.remove('go', 'tone-perfect', 'tone-good', 'tone-plain');
+  void ratingPop.offsetWidth;
+  ratingPop.classList.add('go', `tone-${tone}`);
 }
 
 function worldToScreen(worldPos) {

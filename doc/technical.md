@@ -10,10 +10,10 @@ Prism Rush 是一个独立的 Vite 工程，使用原生 JavaScript、Three.js 0
 
 ## 2. 目录结构
 
-- `index.html`：页面结构、三态屏幕、HUD、冠军入口、开屏小引导、角色商店弹层、排行榜弹层、Aigram 水印和游戏 UUID meta。
+- `index.html`：页面结构、三态屏幕、HUD、冠军入口、`touch_app` 幽灵手指引导、单词评语层、角色商店弹层、排行榜弹层、Aigram 水印和游戏 UUID meta。
 - `src/main.js`：Three.js 场景初始化、低多边形角色加载、角色商店、随机上场规则、角色动作、对象生成、主循环、碰撞、输入、计分、结算和 UI 状态同步。
 - `src/leaderboard.js`：冠军入口、完整排行榜弹层、Rank API 提交/拉取、非 AlterU 下载 CTA、用户头像/姓名渲染、profile tap 和 `score_beat` 通知；分享图引用 `poster.png`。
-- `src/styles.css`：全屏布局、HUD、开屏引导、结算面板、角色商店、排行榜弹层、按钮、连击徽章、浮动分数、台词气泡和响应式尺寸。
+- `src/styles.css`：全屏布局、HUD、幽灵手指与点击波纹、单词评语、结算面板、角色商店、排行榜弹层、按钮、连击徽章、浮动分数和响应式尺寸。
 - `src/i18n.js`：`zh` / `en` 文案字典、语言检测、`t()` 和随机台词函数。
 - `src/sounds.js`：Web Audio API 音效封装，包括开始、换道、收集、撞击、胜利和点击音。
 - `src/assets/gltf/`：从 `_lowpoly_lab` 复制的 6 个角色 GLB：Student、Teen、Punk、Cowboy、Nurse、Cat。
@@ -30,7 +30,7 @@ Prism Rush 是一个独立的 Vite 工程，使用原生 JavaScript、Three.js 0
 
 ## 3. 核心模块
 
-状态管理集中在 `src/main.js` 的 `state` 对象，包含 `phase`、分数、历史最高、combo、当前轨道、目标轨道、倒计时、速度、生成计时器、结算原因和当前角色。屏幕状态通过 `setPhase()` 在开始页、游戏中、结算页之间互斥切换；开始页不渲染开始按钮，只显示全屏 3D 场景和底部小引导，`startScreen` 的 `pointerdown` 直接调用 `startGame()`。
+状态管理集中在 `src/main.js` 的 `state` 对象，包含 `phase`、分数、历史最高、combo、当前轨道、目标轨道、倒计时、速度、生成计时器、结算原因和当前角色。屏幕状态通过 `setPhase()` 在开始页、游戏中、结算页之间互斥切换；开始页不渲染开始按钮，只显示全屏 3D 场景和循环左右移动的幽灵手指，`startScreen` 的 `pointerdown` 直接调用 `startGame()`，`setPhase()` 同步淡出引导。
 
 主循环使用 `requestAnimationFrame` 驱动，`render()` 计算 `dt` 后调用 `updateScene()`，再用 `EffectComposer` 渲染。`updateScene()` 负责赛道框架循环、星点循环、粒子生命周期、玩家浮动、棱镜板自转、镜头追随和角色动作；游戏中额外调用 `updatePlaying()`，按 0.72 秒节奏生成棱晶或危险门。角色动作通过 `characterModel`、`characterMeshes` 和每个 mesh 的原始旋转/位置计算，避免破坏 GLB 原始姿态。
 
@@ -38,7 +38,7 @@ Prism Rush 是一个独立的 Vite 工程，使用原生 JavaScript、Three.js 0
 
 碰撞和更新逻辑使用固定 3 轨道坐标 `[-2.4, 0, 2.4]`。对象从 `z=-64` 向玩家移动，`z>6` 后移除；当对象与玩家横向距离小于 0.82 且 z 距离小于 1.05 时触发收集或撞击。开始后的 1.5 秒缓冲期只跳过危险门死亡判定，不跳过棱晶收集。
 
-反馈系统包括 `popScore()` 浮动分数、`showBubble()` 台词气泡、`spawnParticles()` 收集/撞击粒子、`updateComboUI()` 连击徽章和 `sounds.js` 合成音效。最高分在 `endGame()` 中写入 `localStorage`，并调用 `earnPrisms(state.score)` 把本局分数加入商店余额。再来一次调用 `prepareRandomCharacter()` 和 `startGame()` 重置对象队列、倒计时、分数、combo 和轨道。
+反馈系统包括 `popScore()` 浮动分数、`showRating()` 单词评语、`spawnParticles()` 收集/撞击粒子、`updateComboUI()` 连击徽章和 `sounds.js` 合成音效。`nextLine('ratingWords')` 按顺序轮换短评，combo ≥ 5 时改用 `ratingCombo` 高亮。最高分在 `endGame()` 中写入 `localStorage`，并调用 `earnPrisms(state.score)` 把本局分数加入商店余额。再来一次调用 `prepareRandomCharacter()` 和 `startGame()` 重置对象队列、倒计时、分数、combo 和轨道。
 
 排行榜系统由 `src/leaderboard.js` 管理。`initLeaderboard()` 绑定冠军入口、结算页排行榜按钮、弹层关闭和 Escape；`refreshLeaderboard()` 只在 `window.Aigram.canRank` 时拉取平台榜；`openLeaderboard()` 在非 AlterU 环境渲染 `Get AlterU / 下载 AlterU` CTA；`snapshotPreRunBest()` 在开局前记录自己的旧在榜成绩；`submitFinalScore()` 在结算后提交分数，并在破自己旧纪录时调用 `score_beat` 通知算法，只通知刚被超过且分数最高的 1 个其他用户。完整榜单行展示排名、头像、名字、分数；其他用户行使用 `click` 打开 profile，本人行显示 `YOU / 你` 且不可点击。
 
@@ -52,7 +52,7 @@ Prism Rush 是一个独立的 Vite 工程，使用原生 JavaScript、Three.js 0
 - 换视觉风格：修改 `src/main.js` 的材质颜色、灯光强度、Bloom 参数、几何体尺寸，以及 `src/styles.css` 的 HUD、开屏引导和商店样式。
 - 调整角色库：修改 `src/main.js` 的 `CHARACTER_OPTIONS`，并把对应 GLB 放进 `src/assets/gltf/`、PNG 预览放进 `src/assets/sprites/`；如果新增价格，记得同步 `doc/requirements.md`。
 - 调角色商店规则：修改 `STORE_OWNED_KEY`、`STORE_BALANCE_KEY`、`STORE_PICKED_KEY` 相关的 `loadCharacterStore()`、`buyCharacter()`、`earnPrisms()` 和 `resolveCharacterId()`。
-- 改文案和多语言：修改 `src/i18n.js` 的 `dictionaries`，所有用户可见文字都应继续通过 `t()` 或 `randomLine()` 输出。
+- 改文案和多语言：修改 `src/i18n.js` 的 `dictionaries`，所有用户可见文字都应继续通过 `t()` 或 `nextLine()` 输出。
 - 调音效：修改 `src/sounds.js` 中各事件函数的频率、波形、时长、延迟和音量。
 - 调排行榜：修改 `src/leaderboard.js` 的榜单渲染、通知文案、海报 ref_url、CTA 文案或 score 提交流程；profile tap 必须继续使用 `click`，不要改成 `pointerdown`。
 - 换海报：修改 `gen_poster.py` 的 `PROMPT`、裁切环境变量默认值或标题样式，重新运行脚本；完成后同步 `public/poster.png` 和 `/Users/yin/code/games/games/posters/prism-rush.png`，并确认 `meta.json.cover_url` 仍为 `/poster.png`。

@@ -5,8 +5,7 @@ const dictionaries = {
     kicker: '3D light tunnel',
     title: 'Prism Rush',
     startCopy: 'Thread the glow, skim the gates, keep the prism singing.',
-    tapToStart: 'Tap to start',
-    startHint: 'Tap left or right to switch lanes',
+    startHint: 'Tap left or right',
     shop: 'Characters',
     shopKicker: 'Roster',
     shopTitle: 'Character Shop',
@@ -49,9 +48,8 @@ const dictionaries = {
     home: 'Home',
     win: 'Tunnel clear',
     lose: 'Gate crash',
-    collectLines: ['Clean line!', 'Prism!', 'Nice skim!', 'Still glowing!'],
-    winLines: ['The tunnel opens.', 'Light held steady.'],
-    loseLines: ['Gate bite.', 'Prism cracked.'],
+    ratingWords: ['NICE!', 'SMOOTH!', 'CLEAN!', 'NEAT!', 'SLICK!'],
+    ratingCombo: 'PRISM x{n}',
   },
   zh: {
     time: '时间',
@@ -59,8 +57,7 @@ const dictionaries = {
     kicker: '3D 光隧道',
     title: 'Prism Rush',
     startCopy: '穿过光线、擦过闸门，让棱镜一路发亮。',
-    tapToStart: '点击屏幕开始',
-    startHint: '点击左侧或右侧切换轨道',
+    startHint: '点左侧或右侧换道',
     shop: '角色',
     shopKicker: '角色池',
     shopTitle: '角色商店',
@@ -103,9 +100,8 @@ const dictionaries = {
     home: '返回首页',
     win: '穿出隧道',
     lose: '撞上闸门',
-    collectLines: ['线很干净！', '棱镜到手！', '擦边漂亮！', '还在发光！'],
-    winLines: ['隧道打开了。', '光线稳住了。'],
-    loseLines: ['闸门咬住了。', '棱镜裂了。'],
+    ratingWords: ['漂亮！', '顺滑！', '干净！', '稳住！', '利落！'],
+    ratingCombo: '棱镜 x{n}',
   },
 };
 
@@ -126,8 +122,12 @@ export function t(key, vars) {
   }, value);
 }
 
-export function randomLine(key) {
+const lineCursors = new Map();
+
+export function nextLine(key) {
   const value = dictionaries[locale][key] ?? dictionaries.en[key] ?? [];
   if (!Array.isArray(value) || value.length === 0) return '';
-  return value[Math.floor(Math.random() * value.length)];
+  const cursor = lineCursors.get(key) || 0;
+  lineCursors.set(key, cursor + 1);
+  return value[cursor % value.length];
 }
